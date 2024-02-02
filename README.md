@@ -10,5 +10,5 @@ docker compose up -d
 ```
 ### sink-connector
 ```bash
-./ydb-kafka-sink-connector localhost:2136?database=/local
+./ydb-kafka-sink-connector.jar localhost:2136?database=/local
 ```
