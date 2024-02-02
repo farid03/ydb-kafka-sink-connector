@@ -7,6 +7,7 @@ services:
       ALLOW_ANONYMOUS_LOGIN: "yes"
 
   kafka:
+    container_name: kafka-local
     image: confluentinc/cp-kafka
     ports:
       - "9092:9092"
@@ -20,6 +21,7 @@ services:
 
   yandex-docker-local-ydb:
     container_name: ydb-local
+    image: cr.yandex/yc/yandex-docker-local-ydb:latest
     hostname: localhost
     ports:
       - 2135:2135
@@ -34,9 +36,9 @@ services:
       - GRPC_PORT=2136
       - MON_PORT=8765
       - YDB_USE_IN_MEMORY_PDISKS=true
-    image: cr.yandex/yc/yandex-docker-local-ydb:latest
 
   init-kafka:
+    container_name: kafka-local-init
     image: confluentinc/cp-kafka
     depends_on:
       - kafka
@@ -47,7 +49,7 @@ services:
       kafka-topics --bootstrap-server kafka:29092 --list
 
       echo -e 'Creating kafka topics'
-      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic ydb.sink.connector --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic ydb.source.topic --replication-factor 1 --partitions 1
 
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
