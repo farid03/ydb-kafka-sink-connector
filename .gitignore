@@ -37,3 +37,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Docker Compose ###
+docker-compose/ydb_certs/*
+docker-compose/ydb_data/*

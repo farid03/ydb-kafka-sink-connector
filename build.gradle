@@ -19,6 +19,12 @@ dependencies {
     implementation "org.apache.kafka:connect-api:${connectApi}"
     implementation "org.slf4j:slf4j-simple:${slf4jSimple}"
 
+    implementation "tech.ydb:ydb-sdk-bom:2.1.11"
+    implementation "tech.ydb:ydb-sdk-scheme:2.1.11"
+    implementation "tech.ydb:ydb-sdk-table:2.1.11"
+    implementation "tech.ydb:ydb-sdk-topic:2.1.11"
+    implementation "tech.ydb:ydb-sdk-coordination:2.1.11"
+
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
