@@ -47,8 +47,43 @@ services:
       kafka-topics --bootstrap-server kafka:29092 --list
 
       echo -e 'Creating kafka topics'
-      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic ydb.sink.connector --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic mytopic --replication-factor 1 --partitions 1
 
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
       "
+
+  local-postgres:
+    image: postgres:16
+    container_name: local-postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh
+    profiles: [ "postgres" ]
+
+  ydb-postgres:
+    image: ghcr.io/ydb-platform/local-ydb:nightly
+    ports:
+      - "5432:5432"
+      - "8765:8765"
+    environment:
+      - "YDB_USE_IN_MEMORY_PDISKS=true"
+      - "POSTGRES_USER=${YDB_PG_USER:-postgres}"
+      - "POSTGRES_PASSWORD=${YDB_PG_PASSWORD:-postgres}"
+      - "YDB_EXPERIMENTAL_PG=1"
+    profiles: [ "ydb-postgres" ]
+
+
+volumes:
+  pgdata:
