@@ -1,9 +1,6 @@
 package ydb.kafka.connector;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -17,10 +14,9 @@ import tech.ydb.table.SessionRetryContext;
 import tech.ydb.table.TableClient;
 import tech.ydb.table.transaction.TxControl;
 import ydb.kafka.connector.config.KafkaSinkConnectorConfig;
+import ydb.kafka.connector.utils.DataUtility;
+import ydb.kafka.connector.utils.Record;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class KafkaSinkTask extends SinkTask {
@@ -55,12 +51,12 @@ public class KafkaSinkTask extends SinkTask {
     }
 
     @Override
-    public void put(Collection<SinkRecord> records) {
+    public void put(Collection<SinkRecord> records) { // note: полезно посмотреть на чужие реализации
         for (SinkRecord record : records) {
             if (record.value() != null) {
                 try {
-                    String value = record.value().toString();
-                    sendRecord(value);
+                    Record<String, String> parseRecord = DataUtility.createRecord(record); // TODO парсить в зависимости от схемы
+                    saveRecord(parseRecord);
                 } catch (Exception e) {
                     log.error(e.getMessage() + " / " + connectorName, e);
                 }
@@ -69,11 +65,11 @@ public class KafkaSinkTask extends SinkTask {
 
     }
 
-    private void sendRecord(String value) {
-        Random rand = new Random(); // fixme сделать нормальный id
-        String query // fixme сделать нормальный запрос
-                = "UPSERT INTO mytopic (id, data) "
-                + "VALUES (" + rand.nextInt() + ", \"" + value + "\");";
+    private void saveRecord(Record<String, String> record) { // TODO разобраться с другими типами данных
+        Random rand = new Random();
+        String query // fixme сделать нормальный запрос и id
+                = "UPSERT INTO mytopic (id, key, value) "
+                + "VALUES (" + rand.nextInt() + ", \"" + record.key + "\" , \"" + record.value + "\");";
         SessionRetryContext retryCtx = SessionRetryContext.create(tableClient).build();
 
         // Begin new transaction with SerializableRW mode
@@ -83,7 +79,6 @@ public class KafkaSinkTask extends SinkTask {
         retryCtx.supplyResult(session -> session.executeDataQuery(query, txControl))
                 .join().getValue();
 
-
     }
 
     @Override
@@ -92,7 +87,7 @@ public class KafkaSinkTask extends SinkTask {
 
     @Override
     public void stop() {
-//        producer.flush(); // fixme добавить закрытие ресурсов коннекшна к бд
-//        producer.close();
+        transport.close();
+        tableClient.close();
     }
 }

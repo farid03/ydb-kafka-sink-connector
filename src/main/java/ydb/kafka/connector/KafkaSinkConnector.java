@@ -21,8 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static ydb.kafka.connector.config.KafkaSinkConnectorConfig.SINK_SERVER_CONNECTION_STRING;
-import static ydb.kafka.connector.config.KafkaSinkConnectorConfig.SOURCE_TOPIC_DEFAULT_VALUE;
+import static ydb.kafka.connector.config.KafkaSinkConnectorConfig.*;
 
 public class KafkaSinkConnector extends SinkConnector {
     private final static Logger log = LoggerFactory.getLogger(KafkaSinkConnector.class);
@@ -39,36 +38,37 @@ public class KafkaSinkConnector extends SinkConnector {
         this.configProperties = props;
         try {
             log.info("Connector props : " + props.toString());
+            log.info("Creating table");
+            createTable();
             new KafkaSinkConnectorConfig(props);
+
         } catch (ConfigException e) {
             throw new ConnectException(e.getMessage(), e);
         }
     }
 
-    public void createTable() { // TODO добавить проверку на наличие таблицы и включить автосоздание в зависимости от конфига
-        String connectionString = SINK_SERVER_CONNECTION_STRING;
-
+    public void createTable() { // разумно ли сразу создавать таблицу (у постгреса таблица создается при первой записи, а не при подключении)
+        // TODO включить автосоздание в зависимости от конфига
+        String sourceTopicName = configProperties.get(SOURCE_TOPIC); // TODO сделать несколько топиков
         AuthProvider authProvider = NopAuthProvider.INSTANCE;
 
-        GrpcTransport transport = GrpcTransport.forConnectionString(connectionString)
-                .withAuthProvider(authProvider) // Or this method could not be called at all
-                .build();
+        try (GrpcTransport transport = GrpcTransport.forConnectionString(SINK_SERVER_CONNECTION_STRING)
+                        .withAuthProvider(authProvider) // Or this method could not be called at all
+                        .build()) {
+            try (TableClient tableClient = TableClient.newClient(transport).build()) {
+                SessionRetryContext retryCtx = SessionRetryContext.create(tableClient).build();
 
+                TableDescription seriesTable = TableDescription.newBuilder()
+                        .addNullableColumn("id", PrimitiveType.Int32) // TODO подумать над разумностью решения
+                        .addNullableColumn("key", PrimitiveType.Text)
+                        .addNullableColumn("value", PrimitiveType.Text)
+                        .setPrimaryKey("id")
+                        .build();
 
-        TableClient tableClient = TableClient
-                .newClient(transport)
-                .build();
-
-        SessionRetryContext retryCtx = SessionRetryContext.create(tableClient).build();
-
-        TableDescription seriesTable = TableDescription.newBuilder()
-                .addNullableColumn("id", PrimitiveType.Uint64)
-                .addNullableColumn("data", PrimitiveType.Text)
-                .setPrimaryKey("id")
-                .build();
-
-        retryCtx.supplyStatus(session -> session.createTable(transport.getDatabase() + SOURCE_TOPIC_DEFAULT_VALUE, seriesTable))
-                .join().expectSuccess("Can't create table /mytopic");
+                retryCtx.supplyStatus(session -> session.createTable(transport.getDatabase() + "/" + sourceTopicName, seriesTable))
+                        .join().expectSuccess("Can't create table /" + sourceTopicName);
+            }
+        }
 
     }
 
