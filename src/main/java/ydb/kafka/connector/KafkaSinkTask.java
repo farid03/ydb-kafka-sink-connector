@@ -17,6 +17,7 @@ import ydb.kafka.connector.config.KafkaSinkConnectorConfig;
 import ydb.kafka.connector.utils.DataUtility;
 import ydb.kafka.connector.utils.Record;
 
+import java.text.MessageFormat;
 import java.util.*;
 
 public class KafkaSinkTask extends SinkTask {
@@ -24,7 +25,7 @@ public class KafkaSinkTask extends SinkTask {
     private String connectorName;
     private String connectionString;
     private GrpcTransport transport;
-    private AuthProvider authProvider = NopAuthProvider.INSTANCE;
+    private final AuthProvider authProvider = NopAuthProvider.INSTANCE;
     private TableClient tableClient;
 
     @Override
@@ -66,10 +67,12 @@ public class KafkaSinkTask extends SinkTask {
     }
 
     private void saveRecord(Record<String, String> record) { // TODO разобраться с другими типами данных
-        Random rand = new Random();
-        String query // fixme сделать нормальный запрос и id
-                = "UPSERT INTO mytopic (id, key, value) "
-                + "VALUES (" + rand.nextInt() + ", \"" + record.key + "\" , \"" + record.value + "\");";
+        String queryTemplate
+                = "UPSERT INTO mytopic (partition, offset, key, value) "
+                + "VALUES (\"{0}\", \"{1}\", \"{2}\", \"{3}\");";
+
+        String query = MessageFormat.format(queryTemplate, record.partition, record.offset, record.key, record.value);
+
         SessionRetryContext retryCtx = SessionRetryContext.create(tableClient).build();
 
         // Begin new transaction with SerializableRW mode

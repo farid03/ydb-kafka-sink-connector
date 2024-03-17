@@ -59,10 +59,11 @@ public class KafkaSinkConnector extends SinkConnector {
                 SessionRetryContext retryCtx = SessionRetryContext.create(tableClient).build();
 
                 TableDescription seriesTable = TableDescription.newBuilder()
-                        .addNullableColumn("id", PrimitiveType.Int32) // TODO подумать над разумностью решения
+                        .addNonnullColumn("offset", PrimitiveType.Int64)
+                        .addNullableColumn("partition", PrimitiveType.Int32)
                         .addNullableColumn("key", PrimitiveType.Text)
                         .addNullableColumn("value", PrimitiveType.Text)
-                        .setPrimaryKey("id")
+                        .setPrimaryKeys("offset", "partition")
                         .build();
 
                 retryCtx.supplyStatus(session -> session.createTable(transport.getDatabase() + "/" + sourceTopicName, seriesTable))
@@ -81,8 +82,7 @@ public class KafkaSinkConnector extends SinkConnector {
     public List<Map<String, String>> taskConfigs(int maxTasks) {
         List<Map<String, String>> taskConfigs = new ArrayList<>();
         for (int i = 0; i < maxTasks; i++) {
-            Map<String, String> taskProps = new HashMap<>();
-            taskProps.putAll(configProperties);
+            Map<String, String> taskProps = new HashMap<>(configProperties);
             taskProps.put("task.id", Integer.toString(i));
             taskConfigs.add(taskProps);
         }

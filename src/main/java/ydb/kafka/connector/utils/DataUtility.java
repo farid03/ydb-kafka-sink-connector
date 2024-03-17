@@ -12,7 +12,12 @@ public class DataUtility {
     }
 
     public static Record<String, String> createRecord(SinkRecord sinkRecord) {
-        return new Record<>(sinkRecord.key().toString(), sinkRecord.value().toString());
+        return new Record<>(
+                sinkRecord.key().toString(),
+                sinkRecord.value().toString(),
+                sinkRecord.kafkaPartition(),
+                sinkRecord.kafkaOffset()
+        );
     }
 
 }
