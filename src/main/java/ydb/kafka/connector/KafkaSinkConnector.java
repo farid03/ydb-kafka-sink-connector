@@ -60,7 +60,7 @@ public class KafkaSinkConnector extends SinkConnector {
 
                 TableDescription seriesTable = TableDescription.newBuilder()
                         .addNonnullColumn("offset", PrimitiveType.Int64)
-                        .addNullableColumn("partition", PrimitiveType.Int32)
+                        .addNonnullColumn("partition", PrimitiveType.Int32)
                         .addNullableColumn("key", PrimitiveType.Text)
                         .addNullableColumn("value", PrimitiveType.Text)
                         .setPrimaryKeys("offset", "partition")

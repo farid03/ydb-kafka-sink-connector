@@ -68,8 +68,8 @@ public class KafkaSinkTask extends SinkTask {
 
     private void saveRecord(Record<String, String> record) { // TODO разобраться с другими типами данных
         String queryTemplate
-                = "UPSERT INTO mytopic (partition, offset, key, value) "
-                + "VALUES (\"{0}\", \"{1}\", \"{2}\", \"{3}\");";
+                = "UPSERT INTO mytopic (partition, offset, key, value) " // TODO хардкод
+                + "VALUES ({0}, {1}, \"{2}\", \"{3}\");";
 
         String query = MessageFormat.format(queryTemplate, record.partition, record.offset, record.key, record.value);
 
